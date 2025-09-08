@@ -11,6 +11,7 @@ import subprocess
 import signal
 import os
 import sys
+import threading
 import time
 import logging
 from datetime import datetime
@@ -41,6 +42,15 @@ class ProcessManager:
             )
             self.processes[name] = process
             logger.info(f"{name} started with PID {process.pid}")
+
+
+            # Start thread to print stdout
+            threading.Thread(target=self.stream_output, args=(process.stdout, f"{name} [stdout]"), daemon=True).start()
+            threading.Thread(target=self.stream_output, args=(process.stderr, f"{name} [stderr]"), daemon=True).start()
+
+            
+            
+            
             return process
         except Exception as e:
             logger.error(f"Failed to start {name}: {e}")
