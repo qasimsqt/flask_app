@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mini Shop{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="{{ url_for('index') }}">🏠 Home</a>
+	    <a href="{{ url_for('cart') }}">🛒 Cart</a> 
+    	    <a href="{{ url_for('monitor') }}">📊 Monitor</a> 
+        </nav>
+        
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+        
+        <footer style="text-align: center; margin-top: 40px; padding: 20px; color: #7f8c8d;">
+            <p>&copy; 2025 Mini Shop - Secure E-commerce with AI Monitoring</p>
+        </footer>
+    </div>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

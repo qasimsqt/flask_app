@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - Mini Shop{% endblock %}
+
+{% block content %}
+<h1>🛒 Your Shopping Cart</h1>
+
+{% if cart %}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Price</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in cart %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>${{ item.price }}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="removeItem({{ loop.index0 }})">
+                        Remove
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+            <tr style="background: rgba(46, 204, 113, 0.1); font-weight: bold;">
+                <td><strong>Total</strong></td>
+                <td><strong>${{ total }}</strong></td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div style="text-align: center; margin-top: 30px;">
+    <a href="{{ url_for('checkout') }}" class="btn btn-primary" style="font-size: 18px; padding: 15px 30px;">
+        🔒 Proceed to Checkout
+    </a>
+    <a href="{{ url_for('index') }}" class="btn btn-success" style="margin-left: 20px;">
+        Continue Shopping
+    </a>
+</div>
+{% else %}
+<div style="text-align: center; padding: 60px 20px;">
+    <h2>Your cart is empty</h2>
+    <p style="color: #7f8c8d; margin: 20px 0;">Add some products to get started!</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">
+        Start Shopping
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function removeItem(index) {
+    // This would require additional backend implementation
+    alert('Remove functionality would be implemented here');
+}
+</script>
+{% endblock %}

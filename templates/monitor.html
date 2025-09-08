@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}AI Monitor - Mini Shop{% endblock %}
+
+{% block extra_head %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<style>
+    body {
+        background: #2c3e50;
+        color: #ecf0f1;
+    }
+    .container {
+        background: rgba(44, 62, 80, 0.95);
+        color: #ecf0f1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="monitor-header">
+    <h1>🤖 AI Log Monitor</h1>
+    <p>Real-time anomaly detection for e-commerce transactions</p>
+</div>
+
+
+<div class="table-container">
+    <table class="monitor-table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Amount</th>
+                <th>Anomaly</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody id="log-table">
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px;">
+                    <div class="loading"></div>
+                    <p style="margin-top: 10px;">Loading logs...</p>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+    <button id="pause-btn" class="btn btn-primary">⏸️ Pause Updates</button>
+    <button id="clear-btn" class="btn btn-danger">🗑️ Clear Display</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let updateInterval;
+let isPaused = false;
+
+function updateLogs() {
+    if (isPaused) return;
+    
+    $.getJSON("/logs", function(data) {
+        $("#log-table").empty();
+        
+        if (data.length === 0) {
+            $("#log-table").append(`
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px;">
+                        No logs available yet. Start the log generator to see data.
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+        
+        data.reverse().forEach(log => {
+            let rowClass = "";
+            let anomalyBadge = "";
+            
+            if (log.anomaly === "Normal") {
+                rowClass = "anomaly-normal";
+                anomalyBadge = "✅ Normal";
+            } else if (log.anomaly === "Training") {
+                rowClass = "anomaly-warning";
+                anomalyBadge = "🔄 Training";
+            } else if (log.anomaly === "Anomaly") {
+                rowClass = "anomaly-danger pulse";
+                anomalyBadge = "🚨 Anomaly";
+            } else {
+                anomalyBadge = "❓ " + log.anomaly;
+            }
+
+            const amount = log.amount ? '$' + log.amount : '$0';
+            const details = log.extra || log.path || '-';
+
+            $("#log-table").append(`
+                <tr class="${rowClass}">
+                    <td>${log.type}</td>
+                    <td>${log.status}</td>
+                    <td>${amount}</td>
+                    <td>${anomalyBadge}</td>
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${details}">
+                        ${details}
+                    </td>
+                </tr>
+            `);
+        });
+    }).fail(function() {
+        $("#log-table").html(`
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #e74c3c;">
+                    ❌ Failed to load logs. Make sure the AI monitor is running.
+                </td>
+            </tr>
+        `);
+    });
+}
+
+function updateStats() {
+    if (isPaused) return;
+    
+    $.getJSON("http://localhost:9000/stats", function(data) {
+        $("#total-logs").text(data.total || 0);
+        $("#anomaly-count").text(data.anomalies || 0);
+        $("#normal-count").text(data.normal || 0);
+        $("#anomaly-rate").text((data.anomaly_rate || 0) + '%');
+    }).fail(function() {
+        // Silently fail for stats
+    });
+}
+
+$("#pause-btn").click(function() {
+    isPaused = !isPaused;
+    if (isPaused) {
+        $(this).html("▶️ Resume Updates");
+        $(this).removeClass("btn-primary").addClass("btn-success");
+    } else {
+        $(this).html("⏸️ Pause Updates");
+        $(this).removeClass("btn-success").addClass("btn-primary");
+    }
+});
+
+$("#clear-btn").click(function() {
+    $("#log-table").html(`
+        <tr>
+            <td colspan="6" style="text-align: center; padding: 40px;">
+                Display cleared. Updates will continue...
+            </td>
+        </tr>
+    `);
+});
+
+// Start updates
+updateLogs();
+updateStats();
+setInterval(updateLogs, 2000);
+setInterval(updateStats, 5000);
+</script>
+{% endblock %}

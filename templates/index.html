@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Mini Shop - Home{% endblock %}
+
+{% block content %}
+<div class="header" style="text-align: center; margin-bottom: 40px;">
+    <h1>🛒 Mini Shop</h1>
+    <p style="font-size: 1.2em; color: #7f8c8d; margin-top: 10px;">
+        Discover amazing products with AI-powered security monitoring
+    </p>
+</div>
+
+<div class="products">
+    {% for product in products %}
+    <div class="product-card">
+        <img src="{{ product.image }}" alt="{{ product.name }}" loading="lazy">
+        <h3>{{ product.name }}</h3>
+        <p>${{ product.price }}</p>
+        <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-success">
+            Add to Cart
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<div style="text-align: center; margin-top: 40px; padding: 20px; background: rgba(52, 152, 219, 0.1); border-radius: 10px;">
+    <h3>🔒 Secure Shopping Experience</h3>
+    <p>All transactions are monitored by our AI-powered anomaly detection system for your security.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mini-shop-deployment
+  namespace: mini-shop
+  labels:
+    app: mini-shop
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mini-shop
+  template:
+    metadata:
+      labels:
+        app: mini-shop
+    spec:
+      containers:
+      - name: mini-shop
+        image: qasim21/working_app:v2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+          name: flask-app
+        - containerPort: 9000
+          name: ai-monitor
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mini-shop-secrets
+              key: SECRET_KEY
+        envFrom:
+        - configMapRef:
+            name: mini-shop-config
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+      restartPolicy: Always

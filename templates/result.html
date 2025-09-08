@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout Result - Mini Shop{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    <h1>Checkout Complete</h1>
+
+    <div class="result {{ 'success' if result['status'] == 'success' else 'fail' }}">
+        {% if result['status'] == 'success' %}
+            ✅ Payment Successful!
+        {% else %}
+            ❌ Payment Failed!
+        {% endif %}
+    </div>
+
+    {% if session.get('cart') %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in session.get('cart', []) %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>${{ item.price }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="total">
+        Total Amount: ${{ result['amount'] }}
+    </div>
+
+    {% if result['status'] == 'success' %}
+    <div style="background: rgba(46, 204, 113, 0.1); padding: 20px; border-radius: 10px; margin: 20px 0;">
+        <h3>🎉 Thank you for your purchase!</h3>
+        <p>Your order has been processed successfully. You will receive a confirmation email shortly.</p>
+    </div>
+    {% else %}
+    <div style="background: rgba(231, 76, 60, 0.1); padding: 20px; border-radius: 10px; margin: 20px 0;">
+        <h3>😔 Payment could not be processed</h3>
+        <p>{{ result.get('extra', 'Please try again or contact support.') }}</p>
+    </div>
+    {% endif %}
+
+    <a href="{{ url_for('index') }}" class="btn btn-primary">
+        Continue Shopping
+    </a>
+</div>
+{% endblock %}

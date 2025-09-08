@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Error - Mini Shop{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 60px 20px;">
+    <h1 style="color: #e74c3c;">❌ Oops! Something went wrong</h1>
+    <p style="font-size: 1.2em; color: #7f8c8d; margin: 20px 0;">
+        {{ error }}
+    </p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">
+        🏠 Go Home
+    </a>
+</div>
+{% endblock %}
