@@ -22,8 +22,31 @@
     <p>Real-time anomaly detection for e-commerce transactions</p>
 </div>
 
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number" id="total-logs">0</div>
+        <div>Total Logs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number" id="anomaly-count">0</div>
+        <div>Anomalies</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number" id="normal-count">0</div>
+        <div>Normal</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number" id="anomaly-rate">0%</div>
+        <div>Anomaly Rate</div>
+    </div>
+</div>
 
-<div class="table-container">
+<div style="margin-bottom: 30px;">
+    <button id="logs-tab" class="btn btn-primary" onclick="showTab('logs')">📊 Live Logs</button>
+    <button id="anomalies-tab" class="btn btn-success" onclick="showTab('anomalies')">🚨 Anomaly Analysis</button>
+</div>
+
+<div id="logs-container" class="table-container">
     <table class="monitor-table">
         <thead>
             <tr>
@@ -45,6 +68,31 @@
     </table>
 </div>
 
+<div id="anomalies-container" class="table-container" style="display: none;">
+    <table class="monitor-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Isolation Forest</th>
+                <th>SVM</th>
+                <th>Final Decision</th>
+                <th>Confidence</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody id="anomaly-table">
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px;">
+                    <div class="loading"></div>
+                    <p style="margin-top: 10px;">Loading anomaly analysis...</p>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
 <div style="text-align: center; margin-top: 20px;">
     <button id="pause-btn" class="btn btn-primary">⏸️ Pause Updates</button>
     <button id="clear-btn" class="btn btn-danger">🗑️ Clear Display</button>
@@ -55,6 +103,23 @@
 <script>
 let updateInterval;
 let isPaused = false;
+let currentTab = 'logs';
+
+function showTab(tab) {
+    currentTab = tab;
+    
+    if (tab === 'logs') {
+        $('#logs-container').show();
+        $('#anomalies-container').hide();
+        $('#logs-tab').removeClass('btn-success').addClass('btn-primary');
+        $('#anomalies-tab').removeClass('btn-primary').addClass('btn-success');
+    } else {
+        $('#logs-container').hide();
+        $('#anomalies-container').show();
+        $('#logs-tab').removeClass('btn-primary').addClass('btn-success');
+        $('#anomalies-tab').removeClass('btn-success').addClass('btn-primary');
+    }
+}
 
 function updateLogs() {
     if (isPaused) return;
@@ -116,6 +181,77 @@ function updateLogs() {
     });
 }
 
+function updateAnomalies() {
+    if (isPaused || currentTab !== 'anomalies') return;
+    
+    $.getJSON("http://localhost:9000/anomalies", function(data) {
+        $("#anomaly-table").empty();
+        
+        if (data.length === 0) {
+            $("#anomaly-table").append(`
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px;">
+                        No anomaly analysis available yet. Models are training...
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+        
+        data.reverse().forEach(result => {
+            let rowClass = "";
+            let finalDecisionBadge = "";
+            let confidenceBadge = "";
+            
+            if (result.final_decision === "Normal") {
+                rowClass = "anomaly-normal";
+                finalDecisionBadge = "✅ Normal";
+            } else {
+                rowClass = "anomaly-danger";
+                finalDecisionBadge = "🚨 Anomaly";
+            }
+            
+            if (result.confidence === "High") {
+                confidenceBadge = "🔴 High";
+            } else if (result.confidence === "Medium") {
+                confidenceBadge = "🟡 Medium";
+            } else {
+                confidenceBadge = "🟢 Low";
+            }
+            
+            const timestamp = new Date(result.timestamp).toLocaleTimeString();
+            const amount = result.amount ? '$' + result.amount : '$0';
+            const details = result.extra || '-';
+            
+            const isolationBadge = result.isolation_forest === "Normal" ? "✅ Normal" : "🚨 Anomaly";
+            const svmBadge = result.svm === "Normal" ? "✅ Normal" : "🚨 Anomaly";
+
+            $("#anomaly-table").append(`
+                <tr class="${rowClass}">
+                    <td>${timestamp}</td>
+                    <td>${result.type}</td>
+                    <td>${amount}</td>
+                    <td>${isolationBadge}</td>
+                    <td>${svmBadge}</td>
+                    <td>${finalDecisionBadge}</td>
+                    <td>${confidenceBadge}</td>
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${details}">
+                        ${details}
+                    </td>
+                </tr>
+            `);
+        });
+    }).fail(function() {
+        $("#anomaly-table").html(`
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: #e74c3c;">
+                    ❌ Failed to load anomaly analysis. Make sure the AI monitor is running.
+                </td>
+            </tr>
+        `);
+    });
+}
+
 function updateStats() {
     if (isPaused) return;
     
@@ -152,8 +288,10 @@ $("#clear-btn").click(function() {
 
 // Start updates
 updateLogs();
+updateAnomalies();
 updateStats();
 setInterval(updateLogs, 2000);
+setInterval(updateAnomalies, 3000);
 setInterval(updateStats, 5000);
 </script>
 {% endblock %}

@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify
-from sklearn.ensemble import IsolationForest
+from sklearn.ensemble import IsolationForest, RandomForestClassifier
+from sklearn.svm import OneClassSVM
 import pandas as pd
 import threading
 import time
@@ -17,9 +18,14 @@ MIN_LOGS_FOR_TRAINING = 20
 
 # Global variables
 processed_logs = []
+anomaly_results = []
 df_all = pd.DataFrame()
 model = IsolationForest(contamination=ANOMALY_THRESHOLD, random_state=42)
+svm_model = OneClassSVM(gamma='scale', nu=ANOMALY_THRESHOLD)
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
 model_fitted = False
+svm_fitted = False
+rf_fitted = False
 monitoring_active = True
 
 # Set up logging for the AI monitor
@@ -104,7 +110,13 @@ def monitor_logs():
                     df_features = prepare_features(df_all)
                     model.fit(df_features)
                     model_fitted = True
-                    logger.info(f"Model trained with {len(df_all)} samples")
+                    logger.info(f"Isolation Forest trained with {len(df_all)} samples")
+                    
+                    # Train SVM model
+                    svm_model.fit(df_features)
+                    svm_fitted = True
+                    logger.info(f"SVM model trained with {len(df_all)} samples")
+                    
                 except Exception as e:
                     logger.error(f"Model training failed: {e}")
             
@@ -113,7 +125,34 @@ def monitor_logs():
                 try:
                     df_new = prepare_features(pd.DataFrame([log]))
                     prediction = model.predict(df_new)[0]
-                    log["anomaly"] = "Normal" if prediction == 1 else "Anomaly"
+                    isolation_result = "Normal" if prediction == 1 else "Anomaly"
+                    
+                    # SVM prediction
+                    svm_result = "Normal"
+                    if svm_fitted:
+                        svm_prediction = svm_model.predict(df_new)[0]
+                        svm_result = "Normal" if svm_prediction == 1 else "Anomaly"
+                    
+                    # Combine results for final decision
+                    if isolation_result == "Anomaly" or svm_result == "Anomaly":
+                        log["anomaly"] = "Anomaly"
+                    else:
+                        log["anomaly"] = "Normal"
+                    
+                    # Store detailed results
+                    anomaly_detail = {
+                        "timestamp": log["timestamp"],
+                        "type": log["type"],
+                        "status": log["status"],
+                        "amount": log["amount"],
+                        "isolation_forest": isolation_result,
+                        "svm": svm_result,
+                        "final_decision": log["anomaly"],
+                        "confidence": "High" if isolation_result == svm_result else "Medium",
+                        "extra": log.get("extra", "")
+                    }
+                    anomaly_results.append(anomaly_detail)
+                    
                 except Exception as e:
                     logger.error(f"Prediction failed: {e}")
                     log["anomaly"] = "Error"
@@ -125,6 +164,10 @@ def monitor_logs():
             # Keep only recent logs in memory (last 1000)
             if len(processed_logs) > 1000:
                 processed_logs = processed_logs[-1000:]
+            
+            # Keep only recent anomaly results (last 500)
+            if len(anomaly_results) > 500:
+                anomaly_results = anomaly_results[-500:]
 
 def prepare_features(df):
     """Prepare features for machine learning model"""
@@ -157,6 +200,11 @@ def get_logs():
     recent_logs = processed_logs[-50:] if processed_logs else []
     return jsonify(recent_logs)
 
+@app.route("/anomalies")
+def get_anomalies():
+    """API endpoint for anomaly analysis results"""
+    recent_anomalies = anomaly_results[-100:] if anomaly_results else []
+    return jsonify(recent_anomalies)
 @app.route("/stats")
 def get_stats():
     """API endpoint for monitoring statistics"""
@@ -172,6 +220,7 @@ def get_stats():
         "anomalies": anomalies,
         "normal": normal,
         "model_fitted": model_fitted,
+        "svm_fitted": svm_fitted,
         "anomaly_rate": round((anomalies / total) * 100, 2) if total > 0 else 0
     })
 
